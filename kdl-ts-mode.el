@@ -2,6 +2,7 @@
 
 ;; Copyright (C) 2024 dataphract
 
+;; Homepage   : https://github.com/dataphract/kdl-ts-mode
 ;; Version    : 0.1
 ;; Author     : dataphract <dataphract@gmail.com>
 ;; Maintainer : dataphract <dataphract@gmail.com>
@@ -28,16 +29,18 @@
 
 (defvar kdl-ts-mode--syntax-table
   (let ((table (make-syntax-table)))
-    (modify-syntax-entry ?= ".")
-    (modify-syntax-entry ?/ ". 124b")
-    (modify-syntax-entry ?* ". 23")
+    (modify-syntax-entry ?=  ".")
+    (modify-syntax-entry ?/  ". 124")
+    (modify-syntax-entry ?*  ". 23b")
+    (modify-syntax-entry ?\n ">")
     table)
   "Syntax table for `kdl-ts-mode'.")
 
 (defvar kdl-ts-mode--indent-rules
   '((kdl
      ((parent-is "source_file") column-0 0)
-     ((node-is "}") (and parent parent-bol) 0)))
+     ((node-is "}") (and parent parent-bol) 0)
+     ((parent-is "node_children") parent-bol kdl-ts-mode-indent-offset)))
   "Tree-sitter indent rules for `kdl-ts-mode'.")
 
 ;; Syntax highlighting
@@ -54,7 +57,8 @@
 
    :language 'kdl
    :feature 'constant
-   '((keyword) @font-lock-constant-face)
+   '("null" @font-lock-constant-face
+     (boolean) @font-lock-constant-face)
 
    :language 'kdl
    :feature 'number
@@ -72,7 +76,7 @@
    :language 'kdl
    :feature 'escape-sequence
    :override t
-   '((escape_sequence) @font-lock-escape-face)
+   '((escape) @font-lock-escape-face)
 
    :language 'kdl
    :feature 'node
@@ -87,12 +91,20 @@
    :language 'kdl
    :feature 'error
    :override t
-   '((ERROR) @font-lock-warning-face))
+   '((ERROR) @font-lock-warning-face)
+
+   :language 'kdl
+   :feature 'comment
+   :override t
+   '((node (node_comment)) @font-lock-comment-face
+     (node (node_field (node_field_comment)) @font-lock-comment-face)
+     (node_children (node_children_comment)) @font-lock-comment-face))
+
 
   "Tree-sitter font-lock settings for `kdl-ts-mode'.")
 
 ;;;###autoload
-(define-derived-mode kdl-ts-mode text-mode "KDL"
+(define-derived-mode kdl-ts-mode prog-mode "KDL"
   "Major mode for editing KDL, powered by tree-sitter."
   :group 'kdl
   :syntax-table kdl-ts-mode--syntax-table
@@ -102,8 +114,6 @@
 
     (setq-local comment-start "//")
     (setq-local comment-end "")
-    (setq-local block-comment-start "/*")
-    (setq-local block-comment-end "*/")
 
     (setq-local indent-tabs-mode nil
                 treesit-simple-indent-rules kdl-ts-mode--indent-rules)
@@ -114,9 +124,9 @@
                   (string type)
                   (constant escape-sequence number node property)
                   (bracket
-                   ;delimiter
+                                        ;delimiter
                    error
-                   ;misc-punctuation
+                                        ;misc-punctuation
                    )))
 
     (treesit-major-mode-setup)))
